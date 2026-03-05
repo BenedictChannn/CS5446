@@ -11,7 +11,7 @@ class DictToListWrapper(gym.Wrapper):
     The wrapper to convert Dict observation space to List observation space.
     """
 
-    def __init__(self, env):
+    def __init__(self, env: gym.Env[dict[str, object], dict[str, object]]) -> None:
         super().__init__(env)
         # assert isinstance(env.observation_space,
         #                   gym.spaces.Dict), "The observation space must be of type gym.spaces.Dict"
@@ -20,7 +20,7 @@ class DictToListWrapper(gym.Wrapper):
         )
 
         # transform the observation space to a Box space
-        self.env_features = list(env.observation_space.spaces.keys())
+        self.env_features: list[str] = list(env.observation_space.spaces.keys())
         self.observation_space = Box(
             low=-float("inf"), high=float("inf"), shape=(len(self.env_features),), dtype=np.float32
         )
@@ -28,7 +28,7 @@ class DictToListWrapper(gym.Wrapper):
         # as each action dim is a Discrete space, the size of the Discrete space is the sum of the sizes of each action dim
         # e.g., if action space is {'a': Discrete(2), 'b': Discrete(2)}, then the new action space is Discrete(4),
         # means, 0 -> {'a': 0}, 1 -> {'a': 1}, 2 -> {'b': 0}, 3 -> {'b': 1}
-        action_mapping = {}
+        action_mapping: dict[int, dict[str, np.int64]] = {}
         action_id = 0
         for key, value in env.action_space.spaces.items():
             for i in range(value.n):
@@ -36,20 +36,20 @@ class DictToListWrapper(gym.Wrapper):
                 action_id += 1
 
         self.action_space = Discrete(action_id)
-        self.action_mapping = action_mapping
+        self.action_mapping: dict[int, dict[str, np.int64]] = action_mapping
 
-    def reset(self, **kwargs):
+    def reset(self, **kwargs: object) -> tuple[np.ndarray, dict[str, object]]:
         state, info = super().reset(**kwargs)
         state = self.convert_state_dict2list(state)
         return state, info
 
-    def step(self, action):
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict[str, object]]:
         env_action = self.convert_action_id2dict(action)
         state, reward, done, truncated, info = super().step(env_action)
         state = self.convert_state_dict2list(state)
         return state, reward, done, truncated, info
 
-    def convert_state_dict2list(self, state_dict):
+    def convert_state_dict2list(self, state_dict: dict[str, object]) -> np.ndarray:
         out = []
         for key in self.env_features:
             v = state_dict.get(key, 0)
@@ -64,15 +64,15 @@ class DictToListWrapper(gym.Wrapper):
                     out.append(0.0)
         return np.array(out, dtype=np.float32)
 
-    def convert_action_id2dict(self, action):
+    def convert_action_id2dict(self, action: int) -> dict[str, np.int64]:
         return self.action_mapping[action]
 
-    def get_state_description(self):
+    def get_state_description(self) -> None:
         print("State description:")
         for f in range(len(self.env_features)):
             print(f"state dim {f}: {self.env_features[f]}")
 
-    def get_action_description(self):
+    def get_action_description(self) -> None:
         print("Action description:")
         for k, v in self.action_mapping.items():
             print(f"Action {k}: {v}")
@@ -81,7 +81,7 @@ class DictToListWrapper(gym.Wrapper):
 # ---
 
 
-def exponential_smoothing(data, alpha=0.1):
+def exponential_smoothing(data: list[float] | np.ndarray, alpha: float = 0.1) -> list[float]:
     """Compute exponential smoothing."""
     smoothed = [data[0]]  # Initialize with the first data point
     for i in range(1, len(data)):
@@ -90,7 +90,11 @@ def exponential_smoothing(data, alpha=0.1):
     return smoothed
 
 
-def live_plot(data_dict, save_pdf=False, output_file="training_curves.pdf"):
+def live_plot(
+    data_dict: dict[str, list[float]],
+    save_pdf: bool = False,
+    output_file: str = "training_curves.pdf",
+) -> None:
     """Plot the live graph with multiple subplots."""
 
     plt.style.use("ggplot")
