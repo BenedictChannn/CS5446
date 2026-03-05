@@ -18,6 +18,8 @@ Reference: Schulman et al. (2017), [Proximal Policy Optimization Algorithms](htt
 
 ```
 CS5446_Assignment1/
+├── docs/
+│   └── elevator-domain-guide.md   # Domain & instance explanation (RDDL)
 ├── elevator/
 │   ├── domain.rddl      # RDDL domain: dynamics, reward, actions
 │   └── instance.rddl    # Instance: 1 elevator, 5 floors, horizon 200
@@ -38,7 +40,7 @@ CS5446_Assignment1/
 - **Actions:** `move-current-dir`, `open-door`, `close-door` (max one per step)  
 - **Reward:** penalties for waiting/in-elevator; reward for deliveries  
 
-`Elevator.ipynb` explores the env in detail.
+`Elevator.ipynb` explores the env in detail. See [docs/elevator-domain-guide.md](docs/elevator-domain-guide.md) for a concise explanation of the RDDL domain and instance.
 
 ---
 
