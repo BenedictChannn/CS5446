@@ -6,8 +6,8 @@
 //
 // The movement model is of a second order integrator in 2d
 // The states for each drone is the x,y positions and velocities.
-// The actions are acceleartion in the x,y axes.
-// A third action for each drone is minearl harvesting when possible.
+// The actions are acceleration in the x,y axes.
+// A third action for each drone is mineral harvesting when possible.
 //
 ////////////////////////////////////////////////////////////////////
 non-fluents elevators {
