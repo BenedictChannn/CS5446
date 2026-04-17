@@ -1,0 +1,22 @@
+name: csxx46-ay2526s2-mini-project-dev
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      # Keep native packages on one packaging stack to reduce Windows DLL conflicts.
+      - numpy==2.3.0
+      - pandas==2.3.0
+      - scikit-learn==1.7.0
+      - matplotlib==3.10.0
+      - pillow==11.2.1
+      - scipy==1.15.2
+      - sympy==1.14.0
+      - joblib==1.5.1
+      # Official PyTorch guidance for Windows as of 2026-04-16 favors pip wheels.
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch==2.7.0+cu128
+      - torchvision==0.22.0+cu128
+      - minigrid==3.0.0
+      - gymnasium==1.2.1
