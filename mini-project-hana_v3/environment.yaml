@@ -1,0 +1,8 @@
+name: hana-project
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - numpy
+  - pytest
+  - pip

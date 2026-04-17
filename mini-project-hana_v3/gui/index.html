@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hanamikoji</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f7f3ee;
+    color: #2d2d2d;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Setup screen ──────────────────────────────────────── */
+  #setup-screen {
+    background: white;
+    border-radius: 16px;
+    padding: 40px 48px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.10);
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+  #setup-screen h1 { font-size: 1.8rem; margin-bottom: 6px; }
+  #setup-screen .subtitle {
+    color: #666; font-size: .9rem; margin-bottom: 32px;
+  }
+  .form-group { margin-bottom: 18px; text-align: left; }
+  .form-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; color: #555; }
+  .form-group select {
+    width: 100%; padding: 9px 12px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: .95rem; background: white; cursor: pointer;
+  }
+  #start-btn {
+    width: 100%; padding: 12px; background: #7c3aed; color: white;
+    border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-top: 8px; transition: background .15s;
+  }
+  #start-btn:hover { background: #6d28d9; }
+
+  /* ── Game screen ───────────────────────────────────────── */
+  #game-screen {
+    display: none;
+    width: 100%;
+    max-width: 780px;
+    padding: 20px 16px 32px;
+  }
+
+  .game-title {
+    text-align: center; font-size: 1.25rem; font-weight: 700;
+    margin-bottom: 16px; color: #444;
+  }
+
+  /* Geisha row */
+  #geisha-row {
+    display: flex; gap: 12px; justify-content: center; margin-bottom: 14px;
+  }
+  .geisha-col {
+    display: flex; flex-direction: column; align-items: center;
+    flex: 1; max-width: 220px;
+  }
+  .geisha-card {
+    width: 100%; border-radius: 12px; padding: 14px 12px;
+    text-align: center; transition: background .3s, box-shadow .3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  .geisha-count {
+    font-size: .85rem; font-weight: 700; text-align: center; padding: 2px 0;
+  }
+  .geisha-count-zero  { color: #d1d5db; }
+  .geisha-count-human { color: #3b82f6; }
+  .geisha-count-ai    { color: #ef4444; }
+  .favor-human   { background: #dbeafe; border: 2px solid #3b82f6; }
+  .favor-ai      { background: #fee2e2; border: 2px solid #ef4444; }
+  .favor-neutral { background: #f3f4f6; border: 2px solid #d1d5db; }
+  .geisha-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+  .geisha-rank { font-size: .8rem; color: #666; margin-bottom: 6px; }
+  .geisha-favor {
+    font-size: .78rem; font-weight: 600; padding: 3px 10px;
+    border-radius: 99px; display: inline-block;
+  }
+  .favor-human   .geisha-favor { background: #3b82f6; color: white; }
+  .favor-ai      .geisha-favor { background: #ef4444; color: white; }
+  .favor-neutral .geisha-favor { background: #9ca3af; color: white; }
+
+  /* Status bar */
+  #status-bar {
+    text-align: center; font-size: .9rem; color: #555;
+    margin-bottom: 16px; padding: 8px 12px;
+    background: white; border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  #status-bar .your-turn { color: #7c3aed; font-weight: 700; }
+  #status-bar .ai-turn { color: #6b7280; font-style: italic; }
+
+  /* Players row */
+  #players-row {
+    display: flex; gap: 12px; margin-bottom: 14px;
+  }
+  .player-panel {
+    flex: 1; background: white; border-radius: 12px; padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+  }
+  .player-panel h3 {
+    font-size: .95rem; font-weight: 700; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;
+  }
+  .player-panel.human-panel h3 { color: #7c3aed; }
+  .player-panel.ai-panel h3 { color: #ef4444; }
+  .panel-row { font-size: .83rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
+  .panel-row strong { color: #333; }
+
+  .card-chip {
+    display: inline-block; padding: 2px 8px; margin: 1px 2px;
+    background: #ede9fe; color: #5b21b6; border-radius: 99px;
+    font-size: .75rem; font-weight: 600;
+  }
+  .ai-panel .card-chip { background: #fee2e2; color: #991b1b; }
+  .action-used {
+    display: inline-block; padding: 2px 8px;
+    background: #f3f4f6; color: #6b7280;
+    border-radius: 99px; font-size: .73rem; margin: 1px 2px;
+  }
+
+  /* Action panel */
+  #action-panel {
+    background: white; border-radius: 12px; padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 14px;
+  }
+  #action-panel h4 {
+    font-size: .85rem; font-weight: 700; color: #555;
+    margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .action-btn {
+    display: block; width: 100%; padding: 10px 14px; margin-bottom: 8px;
+    background: #f5f3ff; color: #5b21b6; border: 1.5px solid #c4b5fd;
+    border-radius: 8px; font-size: .9rem; cursor: pointer; text-align: left;
+    transition: background .15s, border-color .15s;
+  }
+  .action-btn:hover { background: #ede9fe; border-color: #a78bfa; }
+  .action-btn:last-child { margin-bottom: 0; }
+  .waiting-msg { font-size: .88rem; color: #9ca3af; font-style: italic; }
+
+  .back-btn {
+    display: block; width: 100%; padding: 8px 14px; margin-bottom: 10px;
+    background: #f9fafb; color: #6b7280; border: 1.5px solid #e5e7eb;
+    border-radius: 8px; font-size: .85rem; cursor: pointer; text-align: left;
+    transition: background .15s;
+  }
+  .back-btn:hover { background: #f3f4f6; }
+  .action-stage-label {
+    font-size: .8rem; color: #888; font-style: italic;
+    margin-bottom: 8px; display: block;
+  }
+
+  /* Log panel */
+  #log-panel {
+    background: white; border-radius: 12px; padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    overflow-y: auto; max-height: 220px;
+  }
+  #log-panel h4 {
+    font-size: .85rem; font-weight: 700; color: #555;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .log-entry {
+    font-size: .82rem; color: #555; padding: 3px 0;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-empty { font-size: .82rem; color: #bbb; font-style: italic; }
+
+  /* Round-end panel */
+  .round-end-header { font-size: 1rem; font-weight: 700; color: #444; margin-bottom: 10px; }
+  .round-end-table {
+    width: 100%; border-collapse: collapse; margin: 10px 0; font-size: .82rem;
+  }
+  .round-end-table th {
+    text-align: left; color: #888; font-weight: 600;
+    border-bottom: 1px solid #eee; padding: 4px 6px;
+  }
+  .round-end-table td { padding: 4px 6px; }
+  .round-end-table td.human-col { color: #3b82f6; font-weight: 600; }
+  .round-end-table td.ai-col    { color: #ef4444; font-weight: 600; }
+  .round-end-summary { font-size: .85rem; color: #444; margin: 10px 0; }
+  .continue-btn {
+    display: block; width: 100%; padding: 11px; margin-top: 14px;
+    background: #7c3aed; color: white; border: none; border-radius: 10px;
+    font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .continue-btn:hover { background: #6d28d9; }
+
+  /* Favor setup interstitial */
+  .favor-row { display:flex; align-items:center; justify-content:space-between;
+               padding:8px 0; border-bottom:1px solid #f0f0f0; }
+  .favor-geisha-name { font-weight:600; color:#374151; }
+  .favor-toggle { display:flex; gap:4px; }
+  .ftog { padding:4px 10px; border:1px solid #d1d5db; border-radius:4px;
+          background:#fff; cursor:pointer; font-size:.85rem; transition:background .1s; }
+  .ftog.active                   { background:#9ca3af; color:#fff; border-color:#9ca3af; }
+  .ftog[data-val="-1"].active    { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+  .ftog[data-val="1"].active     { background:#ef4444; color:#fff; border-color:#ef4444; }
+  .secondary-btn { flex:1; padding:10px; background:#f3f4f6; border:1px solid #d1d5db;
+                   border-radius:6px; font-size:.95rem; font-weight:600; cursor:pointer; }
+  .secondary-btn:hover { background:#e5e7eb; }
+
+  /* Game-over result card (renders inside #action-panel) */
+  .result-card {
+    text-align: center; padding: 20px 16px; border-radius: 8px;
+    border-top: 4px solid transparent;
+  }
+  .result-win  { border-color: #22c55e; background: #f0fdf4; }
+  .result-loss { border-color: #ef4444; background: #fef2f2; }
+  .result-tie  { border-color: #f59e0b; background: #fffbeb; }
+  .result-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .result-text { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+  .result-sub  { font-size: .88rem; color: #666; margin-bottom: 20px; }
+  .result-new-game-btn {
+    padding: 10px 28px; background: #7c3aed; color: white;
+    border: none; border-radius: 10px; font-size: .9rem;
+    font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .result-new-game-btn:hover { background: #6d28d9; }
+
+  /* Win conditions note */
+  .win-note {
+    text-align: center; font-size: .78rem; color: #aaa;
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Setup screen -->
+<div id="setup-screen">
+  <h1>Hanamikoji</h1>
+  <p class="subtitle">Choose a variant to play</p>
+  <div class="form-group">
+    <label>Game Mode</label>
+    <select id="mode-select">
+      <option value="full_game">Full Game (multi-round)</option>
+      <option value="single_round">Single Round</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Variant</label>
+    <select id="variant-select" onchange="rebuildAgentDropdown(this.value)">
+      <option value="tiny_hana">Tiny Hanamikoji (3 geishas)</option>
+      <option value="medium_hana">Hanamikoji (5 geishas)</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Opponent</label>
+    <select id="agent-select">
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Play as</label>
+    <select id="player-select">
+      <option value="0">Player 1</option>
+      <option value="1">Player 2</option>
+    </select>
+  </div>
+  <button id="start-btn" onclick="startGame()">Start Game</button>
+</div>
+
+<!-- Favor setup screen (single-round only) -->
+<div id="favor-screen" style="display:none">
+  <h1>Set Starting Favors</h1>
+  <p class="subtitle">Choose which geishas start with a favor</p>
+  <div id="favor-rows"></div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="secondary-btn" onclick="randomizeFavors()">Randomize</button>
+    <button class="start-btn" style="flex:1" onclick="beginRound()">Begin Round</button>
+  </div>
+</div>
+
+<!-- Game screen -->
+<div id="game-screen">
+  <div id="game-title" class="game-title"></div>
+  <p id="win-note" class="win-note"></p>
+  <div id="geisha-row"></div>
+  <div id="status-bar"></div>
+  <div id="players-row">
+    <div id="human-panel" class="player-panel human-panel"></div>
+    <div id="ai-panel" class="player-panel ai-panel"></div>
+  </div>
+  <div id="action-panel"></div>
+  <div id="log-panel"></div>
+</div>
+
+
+<script>
+let state = null;
+let _selectedActionType = null;
+let _pendingSetup = null;
+let _agentList = [];
+
+async function loadAgentList() {
+  const resp = await fetch('/agent_list');
+  _agentList = await resp.json();
+  rebuildAgentDropdown(document.getElementById('variant-select').value);
+}
+
+function rebuildAgentDropdown(variant) {
+  const variantKey = variant === 'medium_hana' ? 'medium' : 'tiny';
+  const sel = document.getElementById('agent-select');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  for (const agent of _agentList) {
+    if (!agent[variantKey]) continue;
+    const opt = document.createElement('option');
+    opt.value = agent.id;
+    opt.textContent = agent.label;
+    sel.appendChild(opt);
+  }
+  if ([...sel.options].some(o => o.value === prev)) {
+    sel.value = prev;
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function suitLabel(name) {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function actionTypeLabel(type) {
+  const labels = {
+    'reserve':        'Reserve',
+    'discard':        'Discard',
+    'split':          'Offer Split',
+    'split_response': 'Respond to Split',
+  };
+  return labels[type] || type;
+}
+
+function geishaInfo(name) {
+  return state.geishas.find(g => g.name === name) || {rank: '?'};
+}
+
+function countBySuit(cards) {
+  const counts = {};
+  for (const n of cards) counts[n] = (counts[n] || 0) + 1;
+  return counts;
+}
+
+function chipsHtml(names, cssClass) {
+  if (!names || names.length === 0) return '<span style="color:#ccc">—</span>';
+  return names.map(n => `<span class="card-chip ${cssClass||''}">${suitLabel(n)}</span>`).join(' ');
+}
+
+// ── API calls ────────────────────────────────────────────────────────────────
+
+async function startGame() {
+  const agent        = document.getElementById('agent-select').value;
+  const human_player = parseInt(document.getElementById('player-select').value);
+  const variant      = document.getElementById('variant-select').value;
+  const game_mode    = document.getElementById('mode-select').value;
+
+  if (game_mode === 'single_round') {
+    _pendingSetup = {agent, human_player, variant, game_mode};
+    const resp = await fetch('/favor_setup_info', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({variant}),
+    });
+    const info = await resp.json();
+    document.getElementById('setup-screen').style.display = 'none';
+    showFavorSetup(info.geishas);
+    return;
+  }
+
+  const resp = await fetch('/new_game', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({agent, human_player, variant, game_mode}),
+  });
+  state = await resp.json();
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  render(state);
+}
+
+function showFavorSetup(geishas) {
+  const container = document.getElementById('favor-rows');
+  container.innerHTML = '';
+  for (const g of geishas) {
+    const row = document.createElement('div');
+    row.className = 'favor-row';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'favor-geisha-name';
+    nameSpan.textContent = suitLabel(g.name) + ' ';
+    const rankSpan = document.createElement('span');
+    rankSpan.style.cssText = 'color:#888;font-weight:400';
+    rankSpan.textContent = `(rank ${g.rank})`;
+    nameSpan.appendChild(rankSpan);
+
+    const toggle = document.createElement('div');
+    toggle.className = 'favor-toggle';
+    toggle.dataset.suit = g.name;
+    for (const [val, label] of [[-1, 'You'], [0, 'Neutral'], [1, 'AI']]) {
+      const btn = document.createElement('button');
+      btn.className = 'ftog' + (val === 0 ? ' active' : '');
+      btn.dataset.val = String(val);
+      btn.textContent = label;
+      btn.addEventListener('click', () => setFavor(btn));
+      toggle.appendChild(btn);
+    }
+
+    row.appendChild(nameSpan);
+    row.appendChild(toggle);
+    container.appendChild(row);
+  }
+  document.getElementById('favor-screen').style.display = 'block';
+}
+
+function setFavor(btn) {
+  btn.closest('.favor-toggle').querySelectorAll('.ftog').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function randomizeFavors() {
+  document.querySelectorAll('.favor-toggle').forEach(tog => {
+    const btns = tog.querySelectorAll('.ftog');
+    const pick = Math.floor(Math.random() * 3);  // 0=You, 1=Neutral, 2=AI
+    btns.forEach(b => b.classList.remove('active'));
+    btns[pick].classList.add('active');
+  });
+}
+
+async function beginRound() {
+  if (!_pendingSetup) { showSetup(); return; }
+  const hp = _pendingSetup.human_player;
+  const initial_favors = {};
+  document.querySelectorAll('.favor-toggle').forEach(tog => {
+    const rawVal = parseInt(tog.querySelector('.ftog.active').dataset.val);
+    if (rawVal !== 0) {
+      // rawVal -1 = "You", +1 = "AI" (from the toggle's perspective)
+      // engine: player 0 favor = -1, player 1 favor = +1
+      const engineVal = rawVal === -1
+        ? (hp === 0 ? -1 : 1)
+        : (hp === 0 ?  1 : -1);
+      initial_favors[tog.dataset.suit] = engineVal;
+    }
+  });
+  const resp = await fetch('/new_game', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({..._pendingSetup, initial_favors}),
+  });
+  state = await resp.json();
+  document.getElementById('favor-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  render(state);
+}
+
+async function nextRound() {
+  _selectedActionType = null;
+  const resp = await fetch('/next_round', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: '{}',
+  });
+  state = await resp.json();
+  render(state);
+}
+
+async function submitAction(action) {
+  _selectedActionType = null;
+  const resp = await fetch('/action', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(action),
+  });
+  state = await resp.json();
+  render(state);
+}
+
+function showSetup() {
+  document.getElementById('game-screen').style.display  = 'none';
+  document.getElementById('favor-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'block';
+  state = null;
+  _pendingSetup = null;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+
+function render(s) {
+  document.getElementById('game-title').textContent = s.variant_display;
+  document.getElementById('win-note').textContent = s.win_note;
+  renderGeishas(s);
+  renderStatus(s);
+  renderHumanPanel(s);
+  renderAiPanel(s);
+  renderActions(s);
+  renderLog(s);
+}
+
+function renderGeishas(s) {
+  const row = document.getElementById('geisha-row');
+  row.innerHTML = '';
+
+  const humanSecured  = countBySuit(s.human.collected);
+  const aiSecured     = countBySuit(s.ai.collected);
+  const humanReserved = countBySuit(s.human.reserved || []);
+
+  for (const g of s.geishas) {
+    const hCount = humanSecured[g.name]  || 0;
+    const aCount = aiSecured[g.name]     || 0;
+    const rCount = humanReserved[g.name] || 0;
+
+    const col = document.createElement('div');
+    col.className = 'geisha-col';
+
+    const aiCountEl = document.createElement('div');
+    aiCountEl.className = 'geisha-count ' + (aCount > 0 ? 'geisha-count-ai' : 'geisha-count-zero');
+    aiCountEl.textContent = aCount;
+
+    const card = document.createElement('div');
+    card.className = 'geisha-card';
+    // g.favor: -1 = player 0 leads, 1 = player 1 leads, 0 = neutral
+    const favorHolder = g.favor === -1 ? 0 : g.favor === 1 ? 1 : null;
+    const humanHasFavor = favorHolder === s.human_player;
+    const aiHasFavor    = favorHolder !== null && !humanHasFavor;
+    card.classList.add(humanHasFavor ? 'favor-human' : aiHasFavor ? 'favor-ai' : 'favor-neutral');
+
+    let favorLabel = 'Neutral';
+    if (favorHolder !== null) favorLabel = humanHasFavor ? 'Tiebreak favors you' : 'Tiebreak favors AI';
+
+    card.innerHTML =
+      `<div class="geisha-name">${suitLabel(g.name)}</div>` +
+      `<div class="geisha-rank">Rank ${g.rank}</div>` +
+      `<span class="geisha-favor">${favorLabel}</span>`;
+
+    const humanCountEl = document.createElement('div');
+    humanCountEl.className = 'geisha-count ' + (hCount > 0 ? 'geisha-count-human' : 'geisha-count-zero');
+    humanCountEl.textContent = hCount + (rCount > 0 ? ` (+${rCount})` : '');
+
+    col.appendChild(aiCountEl);
+    col.appendChild(card);
+    col.appendChild(humanCountEl);
+    row.appendChild(col);
+  }
+}
+
+function renderStatus(s) {
+  const bar = document.getElementById('status-bar');
+  const isYourTurn = s.current_player === s.human_player;
+  let turnLabel;
+  if (s.winner !== null) {
+    turnLabel = 'Game over';
+  } else if (isYourTurn) {
+    turnLabel = '<span class="your-turn">Your turn</span>';
+  } else {
+    turnLabel = '<span class="ai-turn">AI thinking…</span>';
+  }
+  bar.innerHTML =
+    `Round ${s.round} &nbsp;·&nbsp; ` +
+    `Turn ${s.turn}/${s.turns_per_round} &nbsp;·&nbsp; ${turnLabel}`;
+}
+
+function renderHumanPanel(s) {
+  const panel = document.getElementById('human-panel');
+  const aiId = 1 - s.human_player;
+  panel.innerHTML =
+    `<h3>You (P${s.human_player + 1})</h3>` +
+    `<div class="panel-row"><strong>Hand:</strong> ${chipsHtml(s.human.hand, '')}</div>` +
+    `<div class="panel-row"><strong>Collected:</strong> ${chipsHtml(s.human.collected, '')}</div>` +
+    `<div class="panel-row"><strong>Reserved:</strong> ${(s.human.reserved || []).length}</div>` +
+    `<div class="panel-row"><strong>Used actions:</strong> ` +
+    (s.human.used_actions.length
+      ? s.human.used_actions.map(a => `<span class="action-used">${a}</span>`).join(' ')
+      : '<span style="color:#ccc">—</span>') +
+    `</div>`;
+}
+
+function renderAiPanel(s) {
+  const panel = document.getElementById('ai-panel');
+  const aiId = 1 - s.human_player;
+  panel.innerHTML =
+    `<h3>AI (P${aiId + 1})</h3>` +
+    `<div class="panel-row"><strong>Collected:</strong> ${chipsHtml(s.ai.collected, 'ai-chip')}</div>` +
+    `<div class="panel-row"><strong>Reserved:</strong> ${s.ai.reserved_count} (hidden)</div>` +
+    `<div class="panel-row"><strong>Used actions:</strong> ` +
+    (s.ai.used_actions.length
+      ? s.ai.used_actions.map(a => `<span class="action-used">${a}</span>`).join(' ')
+      : '<span style="color:#ccc">—</span>') +
+    `</div>`;
+}
+
+function _actionLabel(action, s) {
+  if (action.action_type === 'reserve') {
+    const c = action.cards[0];
+    const rank = geishaInfo(c).rank;
+    return `${suitLabel(c)} (rank ${rank})`;
+  } else if (action.action_type === 'discard') {
+    const reveal = suitLabel(action.cards[action.choice]);
+    const hide   = suitLabel(action.cards[1 - action.choice]);
+    return `Reveal ${reveal} + hide ${hide}`;
+  } else if (action.action_type === 'split') {
+    const labels = action.cards.map(suitLabel);
+    return `${labels[0]} + ${labels[1]}`;
+  } else if (action.action_type === 'split_response') {
+    const offered = s.pending_split.cards;
+    const take = suitLabel(offered[action.choice]);
+    const give = suitLabel(offered[1 - action.choice]);
+    return `Take ${take}, give ${give}`;
+  }
+  return `${action.cards.join(', ')}`;
+}
+
+function geishaSummaryTableHTML(r) {
+  const rows = r.per_geisha.map(g => `<tr>
+    <td>${suitLabel(g.name)}</td>
+    <td>${g.rank}</td>
+    <td class="human-col">${g.human_total}</td>
+    <td class="ai-col">${g.ai_total}</td>
+    <td>${g.prev_favor}</td>
+    <td>${g.updated_favor}</td>
+  </tr>`).join('');
+  return `<table class="round-end-table">
+    <thead><tr>
+      <th>Geisha</th><th>Rank</th>
+      <th style="color:#3b82f6">You</th>
+      <th style="color:#ef4444">AI</th>
+      <th>Prev Favor</th>
+      <th>Updated Favor</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderRoundEnd(s) {
+  const panel = document.getElementById('action-panel');
+  const r = s.round_end_summary;
+
+  // "X more needed" line
+  const wg = r.win_geisha_count;
+  const wf = r.win_favor_pts;
+  let needLines = '';
+  const hNeedG = Math.max(wg - r.human_geisha_count, 0);
+  const aNeedG = Math.max(wg - r.ai_geisha_count, 0);
+  if (wf !== null && wf !== undefined) {
+    const hNeedF = Math.max(wf - r.human_favor_pts, 0);
+    const aNeedF = Math.max(wf - r.ai_favor_pts, 0);
+    needLines =
+      `<div>You need <strong>${hNeedG}</strong> more geisha(s) or <strong>${hNeedF}</strong> more pts</div>` +
+      `<div>AI needs <strong>${aNeedG}</strong> more geisha(s) or <strong>${aNeedF}</strong> more pts</div>`;
+  } else {
+    needLines =
+      `<div>You need <strong>${hNeedG}</strong> more geisha(s)</div>` +
+      `<div>AI needs <strong>${aNeedG}</strong> more geisha(s)</div>`;
+  }
+
+  panel.innerHTML = `
+    <div class="round-end-header">End of Round ${s.round}</div>
+    ${geishaSummaryTableHTML(r)}
+    <div class="round-end-summary">
+      <span style="color:#3b82f6;font-weight:600">You:</span>
+      ${r.human_geisha_count} geisha(s) · ${r.human_favor_pts} pts
+      &nbsp;&nbsp;
+      <span style="color:#ef4444;font-weight:600">AI:</span>
+      ${r.ai_geisha_count} geisha(s) · ${r.ai_favor_pts} pts
+    </div>
+    <div class="round-end-summary" style="color:#888;font-size:.8rem">${needLines}</div>
+    <button class="continue-btn" onclick="nextRound()">Continue to Round ${s.round + 1}</button>
+  `;
+}
+
+function renderGameEnd(s) {
+  const panel = document.getElementById('action-panel');
+  const r = s.game_end_summary;
+  const isTie = s.winner === -1;
+  const humanWon = !isTie && s.winner === s.human_player;
+
+  const resultClass = isTie ? 'result-tie' : (humanWon ? 'result-win' : 'result-loss');
+  const icon  = isTie ? '🤝' : (humanWon ? '🎉' : '😔');
+  const text  = isTie ? 'It\'s a tie!' : (humanWon ? 'You win!' : 'AI wins.');
+  const sub   = isTie ? 'No winner this round.' : (humanWon ? 'Well played!' : 'Better luck next time.');
+
+  const statsLines =
+    `<div>You: ${r.human_geisha_count} geisha(s) · ${r.human_favor_pts} pts</div>` +
+    `<div>AI: ${r.ai_geisha_count} geisha(s) · ${r.ai_favor_pts} pts</div>`;
+
+  panel.innerHTML = `
+    <div class="result-card ${resultClass}">
+      <div class="result-icon">${icon}</div>
+      <div class="result-text">${text}</div>
+      <div class="result-sub">${sub}</div>
+    </div>
+    ${geishaSummaryTableHTML(r)}
+    <div class="round-end-summary" style="color:#888;font-size:.8rem">${statsLines}</div>
+    <button class="continue-btn" onclick="showSetup()">New Game</button>
+  `;
+}
+
+function renderActions(s) {
+  const panel = document.getElementById('action-panel');
+
+  if (s.round_end_summary) {
+    renderRoundEnd(s);
+    return;
+  }
+
+  if (s.winner !== null) {
+    renderGameEnd(s);
+    return;
+  }
+
+  panel.innerHTML = '<h4>Actions</h4>';
+
+  if (s.current_player !== s.human_player) {
+    panel.innerHTML += '<p class="waiting-msg">Waiting for AI to move…</p>';
+    return;
+  }
+
+  if (s.legal_actions.length === 0) {
+    panel.innerHTML += '<p class="waiting-msg">No actions available.</p>';
+    return;
+  }
+
+  if (_selectedActionType === null) {
+    // Stage 1: show one button per distinct action type
+    const seen = new Set();
+    for (const action of s.legal_actions) {
+      if (seen.has(action.action_type)) continue;
+      seen.add(action.action_type);
+      const type = action.action_type;
+      const btn = document.createElement('button');
+      btn.className = 'action-btn';
+      btn.textContent = actionTypeLabel(type);
+      btn.addEventListener('click', () => { _selectedActionType = type; renderActions(s); });
+      panel.appendChild(btn);
+    }
+  } else {
+    // Stage 2: back button + filtered actions
+    const backBtn = document.createElement('button');
+    backBtn.className = 'back-btn';
+    backBtn.textContent = '← Back';
+    backBtn.addEventListener('click', () => { _selectedActionType = null; renderActions(s); });
+    panel.appendChild(backBtn);
+
+    const label = document.createElement('span');
+    label.className = 'action-stage-label';
+    label.textContent = actionTypeLabel(_selectedActionType);
+    panel.appendChild(label);
+
+    const filtered = s.legal_actions.filter(a => a.action_type === _selectedActionType);
+    for (const action of filtered) {
+      const btn = document.createElement('button');
+      btn.className = 'action-btn';
+      btn.textContent = _actionLabel(action, s);
+      btn.addEventListener('click', () => submitAction(action));
+      panel.appendChild(btn);
+    }
+  }
+}
+
+function renderLog(s) {
+  const panel = document.getElementById('log-panel');
+  panel.innerHTML = '<h4>Log</h4>';
+
+  if (!s.log || s.log.length === 0) {
+    panel.innerHTML += '<div class="log-empty">No events yet.</div>';
+    return;
+  }
+  for (const entry of s.log) {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    if (entry.bold) {
+      const strong = document.createElement('strong');
+      strong.textContent = entry.text;
+      div.appendChild(strong);
+    } else {
+      div.textContent = entry.text;
+    }
+    panel.appendChild(div);
+  }
+  panel.scrollTop = panel.scrollHeight;
+}
+
+loadAgentList();
+</script>
+</body>
+</html>
